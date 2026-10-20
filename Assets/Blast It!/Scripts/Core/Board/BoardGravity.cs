@@ -14,80 +14,77 @@ public class BoardGravity : MonoBehaviour
         else Destroy(gameObject);
     }
 
-    /// <summary>
-    /// Sütun sütun tarayarak havada kalan taşları aşağı indirir ve tepeden yeni taşlar düşürür.
-    /// Orkestra şefi animasyonları bekleyebilsin diye IEnumerator döner.
-    /// </summary>
     public IEnumerator ApplyGravityRoutine()
     {
         bool gravityApplied = false;
 
-        // Her sütunu (X) ayrı ayrı aşağıdan yukarı (Y) doğru tarıyoruz
         for (int x = 0; x < BoardManager.Instance.Width; x++)
         {
-            int emptyY = 0;     // Hedef boşluğun Y ekseni (Aşağıdan yukarı çıkar)
-            int spawnCount = 0; // O sütunda tepeden kaç tane yeni taş düşecek?
+            int spawnCount = 0; // Tepeden (ekran dışından) kaç tane yeni taş doğacak?
 
+            // Sütunu en aşağıdan (y=0) en tepeye kadar tarıyoruz
             for (int y = 0; y < BoardManager.Instance.Height; y++)
             {
                 Cell currentCell = BoardManager.Instance.GetCell(x, y);
 
-                // Eğer engel veya oynanamaz hücre varsa (Şimdilik yok ama altyapı olsun)
-                if (!currentCell.IsPlayable)
-                {
-                    emptyY = y + 1;
-                    continue;
-                }
+                // Eğer hücre Void veya Obstacle ise burayla işimiz yok, es geç
+                if (!currentCell.IsPlayable) continue;
 
-                // Eğer hücrede taş varsa ve altında boşluk kalmışsa (y > emptyY)
-                if (currentCell.HasItem)
+                // Oynanabilir bir hücre BOŞ kalmışsa, doldurmamız lazım!
+                if (!currentCell.HasItem)
                 {
-                    if (y > emptyY)
+                    bool itemFell = false;
+
+                    // Bu boşluğun üstündeki (upperY) tüm hücreleri tarayıp düşecek taş arıyoruz
+                    for (int upperY = y + 1; upperY < BoardManager.Instance.Height; upperY++)
                     {
-                        // Taşı yerinden sök ve aşağıdaki boşluğa oturt
-                        Item item = currentCell.ExtractItem();
-                        Cell targetCell = BoardManager.Instance.GetCell(x, emptyY);
-                        
-                        targetCell.SetItem(item);
-                        item.UpdateCoordinates(x, emptyY);
+                        Cell upperCell = BoardManager.Instance.GetCell(x, upperY);
 
-                        // Fiziksel olarak animasyonla aşağı kaydır
-                        Vector3 targetPos = BoardManager.Instance.GridToWorldPosition(x, emptyY);
-                        targetPos.y = 0.5f;
-                        
-                        item.MoveTo(targetPos, dropDuration);
-                        gravityApplied = true;
+                        // Eğer yukarıdaki hücre Void/Obstacle ise taşı engellemesin, içinden geçip gitsin
+                        if (!upperCell.IsPlayable) continue;
+
+                        // Düşecek bir taş bulduk!
+                        if (upperCell.HasItem)
+                        {
+                            Item item = upperCell.ExtractItem(); // Yukarıdan sök
+                            currentCell.SetItem(item);           // Boşluğa yerleştir
+                            item.UpdateCoordinates(x, y);
+
+                            Vector3 targetPos = BoardManager.Instance.GridToWorldPosition(x, y);
+                            targetPos.y = 0.5f;
+
+                            item.MoveTo(targetPos, dropDuration);
+                            gravityApplied = true;
+                            itemFell = true;
+                            break; // Bu boşluk dolduğuna göre, dış döngüdeki bir sonraki boşluğu aramaya geç
+                        }
                     }
-                    emptyY++;
+
+                    // Yukarıdaki her yere baktık ama düşecek taş bulamadık. 
+                    // Demek ki o sütundaki tüm var olan taşlar düştü. Havuzdan YENİ TAŞ çekmeliyiz!
+                    if (!itemFell)
+                    {
+                        Item newItem = ItemPool.Instance.GetRandomItem();
+                        currentCell.SetItem(newItem);
+                        newItem.UpdateCoordinates(x, y);
+
+                        Vector3 targetPos = BoardManager.Instance.GridToWorldPosition(x, y);
+                        targetPos.y = 0.5f;
+
+                        // Taşı ekran dışından (en tepeden) başlatarak düşme efekti veriyoruz
+                        Vector3 spawnPos = BoardManager.Instance.GridToWorldPosition(x, BoardManager.Instance.Height + spawnCount);
+                        spawnPos.y = 0.5f;
+                        newItem.transform.position = spawnPos;
+
+                        newItem.MoveTo(targetPos, dropDuration);
+                        gravityApplied = true;
+                        spawnCount++;
+                    }
                 }
-            }
-
-            // Sütundaki var olan taşlar düştü, en tepede (emptyY'den Height'a kadar) boşluk kaldıysa doldur (Refill)
-            for (int y = emptyY; y < BoardManager.Instance.Height; y++)
-            {
-                Cell targetCell = BoardManager.Instance.GetCell(x, y);
-                if (!targetCell.IsPlayable) continue;
-
-                // Havuzdan yeni taş çek ve hücreye yaz
-                Item newItem = ItemPool.Instance.GetRandomItem();
-                targetCell.SetItem(newItem);
-                newItem.UpdateCoordinates(x, y);
-
-                Vector3 targetPos = BoardManager.Instance.GridToWorldPosition(x, y);
-                targetPos.y = 0.5f;
-
-                // Taşı görsel olarak tahtanın tepesinden (ekran dışından) başlatıyoruz ki aşağı düşsün
-                Vector3 spawnPos = BoardManager.Instance.GridToWorldPosition(x, BoardManager.Instance.Height + spawnCount);
-                spawnPos.y = 0.5f;
-                newItem.transform.position = spawnPos;
-
-                newItem.MoveTo(targetPos, dropDuration);
-                gravityApplied = true;
-                spawnCount++;
             }
         }
 
-        // Eğer en az 1 taş bile yer değiştirdiyse animasyon süresi kadar bekle
+        // Eğer en az bir taş hareket ettiyse, animasyon bitene kadar şefi beklet
         if (gravityApplied)
         {
             yield return new WaitForSeconds(dropDuration);

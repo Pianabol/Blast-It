@@ -199,6 +199,12 @@ public class BoardOrchestrator : MonoBehaviour
             Item itemToDestroy = cell.ExtractItem();
             if (itemToDestroy != null)
             {
+                // YENİ EKLENEN KABLO: Taşı yok etmeden önce GoalManager'a "Bunu listeden düş" diyoruz.
+                if (GoalManager.Instance != null)
+                {
+                    GoalManager.Instance.DecreaseGoal(itemToDestroy.Type);
+                }
+                
                 itemToDestroy.transform.localScale = Vector3.one;
                 ItemPool.Instance.ReturnItem(itemToDestroy);
             }
