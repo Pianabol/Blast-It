@@ -17,7 +17,6 @@ public class InputManager : MonoBehaviour
 
     private void Update()
     {
-        // Sol fare tıklaması veya mobil ekrana dokunma
         if (Input.GetMouseButtonDown(0))
         {
             HandleClick(Input.mousePosition);
@@ -26,31 +25,28 @@ public class InputManager : MonoBehaviour
 
     private void HandleClick(Vector3 screenPosition)
     {
-        // Eğer kamera atanmamışsa çık
         if (mainCamera == null) return;
 
-        // Ekrandaki tıklama noktasından 3D uzaya doğru bir ışın fırlatıyoruz
         Ray ray = mainCamera.ScreenPointToRay(screenPosition);
-        
-        // Debug amaçlı sahnede ışını çizelim (Scene penceresinde kırmızı çizgi olarak görünür)
         Debug.DrawRay(ray.origin, ray.direction * rayDistance, Color.red, 2f);
 
-        // Işın, sadece boardLayer'da bulunan bir objeye çarparsa if bloğuna girer
         if (Physics.Raycast(ray, out RaycastHit hit, rayDistance, boardLayer))
         {
-            // Çarpılan noktanın 3D World koordinatını aldık
-            Vector3 hitPoint = hit.point;
+            Vector2Int gridCoordinate = BoardManager.Instance.WorldToGridPosition(hit.point);
 
-            // Çarpılan noktanın Board üzerindeki (x, y) indekslerini hesapla
-            Vector2Int gridCoordinate = BoardManager.Instance.WorldToGridPosition(hitPoint);
-
-            // Koordinat tahta sınırları içindeyse işlemi onayla
             if (BoardManager.Instance.IsValidCoordinate(gridCoordinate.x, gridCoordinate.y))
             {
                 Debug.Log($"<color=yellow>[INPUT]</color> Tıklanan Hücre: [{gridCoordinate.x}, {gridCoordinate.y}]");
                 
-                // İleride buraya şunu ekleyeceğiz:
-                // GameManager.Instance.OnCellClicked(gridCoordinate.x, gridCoordinate.y);
+                // KRİTİK BAĞLANTI: Tıklama bilgisini Şef'e gönderiyoruz!
+                if (BoardOrchestrator.Instance != null)
+                {
+                    BoardOrchestrator.Instance.OnCellClicked(gridCoordinate.x, gridCoordinate.y);
+                }
+                else
+                {
+                    Debug.LogError("<color=red>[InputManager] Sahnede BoardOrchestrator bulunamadı! Hierarchy'e ekledin mi?</color>");
+                }
             }
             else
             {
@@ -58,5 +54,4 @@ public class InputManager : MonoBehaviour
             }
         }
     }
-
 }

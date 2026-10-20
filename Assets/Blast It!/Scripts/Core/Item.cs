@@ -41,7 +41,16 @@ public class Item : MonoBehaviour
 
     public void MoveTo(Vector3 targetPosition, float duration = 0.3f)
     {
-        // Y Ekseninden (Havadan) aşağı düşüş animasyonları falan buralara eklenecek
-        transform.position = targetPosition;
+        if (duration <= 0f)
+        {
+            transform.position = targetPosition;
+        }
+        else
+        {
+            // Varsa üzerindeki eski hareketi iptal et ve yeni pozisyona yumuşak (EaseInOut) kaydır
+            LeanTween.cancel(gameObject);
+            LeanTween.move(gameObject, targetPosition, duration).setEaseInOutQuad();
+        }
     }
+    
 }
