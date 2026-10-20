@@ -21,6 +21,10 @@ public class BoardOrchestrator : MonoBehaviour
 
     public void OnCellClicked(int x, int y)
     {
+
+        // YENİ EKLENEN KİLİT: Eğer oyun bitmişse veya başlamadıysa tıklamaları tamamen engelle
+        if (GameManager.Instance != null && !GameManager.Instance.CanPlay()) return;
+
         if (isAnimating) return;
 
         Cell clickedCell = BoardManager.Instance.GetCell(x, y);
@@ -120,6 +124,12 @@ public class BoardOrchestrator : MonoBehaviour
         }
         else
         {
+            // YENİ EKLENEN SATIR: Eşleşme başarılı oldu, tam bu anda 1 hamle (Move) düşüyoruz.
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.DecreaseMove();
+            }
+            
             // Eşleşme varsa "ProcessBoardRoutine" adındaki şelale döngüsüne giriyoruz!
             yield return StartCoroutine(ProcessBoardRoutine(matches));
             

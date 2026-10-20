@@ -17,16 +17,19 @@ public class Cell
     // O an bu hücrenin üzerinde duran blok/taş
     public Item CurrentItem { get; private set; }
 
+    // DÜZELTME: Artık dışarıdan değer atanabilir (set) durumda
+    public bool IsPlayable { get; set; }
+
     public Cell(int x, int y, CellType type = CellType.Normal)
     {
         X = x;
         Y = y;
         Type = type;
         CurrentItem = null;
+        
+        // DÜZELTME: Başlangıç oynanabilirlik durumunu constructor içinde belirliyoruz
+        IsPlayable = (type == CellType.Normal);
     }
-
-    // Hücrenin oynanabilir olup olmadığını kontrol eder
-    public bool IsPlayable => Type == CellType.Normal;
 
     // Hücreye yeni bir taş atar
     public void SetItem(Item newItem)
