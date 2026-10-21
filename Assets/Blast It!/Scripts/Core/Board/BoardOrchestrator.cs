@@ -11,7 +11,9 @@ public class BoardOrchestrator : MonoBehaviour
     [SerializeField] private float selectionLiftHeight = 1.0f;
 
     private Cell firstSelectedCell;
-    private bool isAnimating = false;
+    
+    // GameManager'ın durumu okuyabilmesi için public property yaptık
+    public bool IsAnimating { get; private set; } 
 
     private void Awake()
     {
@@ -21,11 +23,10 @@ public class BoardOrchestrator : MonoBehaviour
 
     public void OnCellClicked(int x, int y)
     {
-
         // YENİ EKLENEN KİLİT: Eğer oyun bitmişse veya başlamadıysa tıklamaları tamamen engelle
         if (GameManager.Instance != null && !GameManager.Instance.CanPlay()) return;
 
-        if (isAnimating) return;
+        if (IsAnimating) return;
 
         Cell clickedCell = BoardManager.Instance.GetCell(x, y);
         if (clickedCell == null || !clickedCell.HasItem) return;
@@ -86,7 +87,7 @@ public class BoardOrchestrator : MonoBehaviour
 
     private IEnumerator SwapRoutine(Cell cellA, Cell cellB)
     {
-        isAnimating = true;
+        IsAnimating = true;
 
         Item itemA = cellA.CurrentItem;
         Item itemB = cellB.CurrentItem;
@@ -119,12 +120,15 @@ public class BoardOrchestrator : MonoBehaviour
 
             yield return new WaitForSeconds(swapDuration);
             
-            isAnimating = false;
+            IsAnimating = false;
             firstSelectedCell = null;
+
+            // YENİ: Taşlar geri döndü ve animasyon bitti. Eğer hamle bitmişse hakemi çağır.
+            if (GameManager.Instance != null) GameManager.Instance.EvaluateGameEnd();
         }
         else
         {
-            // YENİ EKLENEN SATIR: Eşleşme başarılı oldu, tam bu anda 1 hamle (Move) düşüyoruz.
+            // Eşleşme başarılı oldu, tam bu anda 1 hamle (Move) düşüyoruz.
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.DecreaseMove();
@@ -134,7 +138,10 @@ public class BoardOrchestrator : MonoBehaviour
             yield return StartCoroutine(ProcessBoardRoutine(matches));
             
             firstSelectedCell = null;
-            isAnimating = false;
+            IsAnimating = false;
+
+            // YENİ: Dev şelale bitti, tahta tamamen duruldu. Hakemi çağır!
+            if (GameManager.Instance != null) GameManager.Instance.EvaluateGameEnd();
         }
     }
 
@@ -199,7 +206,7 @@ public class BoardOrchestrator : MonoBehaviour
             Item itemToDestroy = cell.ExtractItem();
             if (itemToDestroy != null)
             {
-                // YENİ EKLENEN KABLO: Taşı yok etmeden önce GoalManager'a "Bunu listeden düş" diyoruz.
+                // Taşı yok etmeden önce GoalManager'a "Bunu listeden düş" diyoruz.
                 if (GoalManager.Instance != null)
                 {
                     GoalManager.Instance.DecreaseGoal(itemToDestroy.Type);

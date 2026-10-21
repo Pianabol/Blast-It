@@ -48,7 +48,7 @@ public class BoardVisualController : MonoBehaviour
         Debug.Log("<color=cyan>[BoardVisualController]</color> Board Visuals Generated!");
     }
 
-    private void ClearTiles()
+    public void ClearTiles()
     {
         for (int i = tilesRoot.childCount - 1; i >= 0; i--)
         {

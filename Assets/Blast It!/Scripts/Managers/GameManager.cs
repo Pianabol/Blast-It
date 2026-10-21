@@ -9,6 +9,10 @@ public class GameManager : MonoBehaviour
     
     private int currentMoves;
 
+    // YENİ: Bekleme (Pending) bayrakları
+    private bool isWinPending;
+    private bool isLosePending;
+
     // YENİ: Observer Pattern (Sınıfları birbirinden bağımsızlaştıran yapı)
     private readonly List<IGameStateListener> stateListeners = new List<IGameStateListener>();
 
@@ -63,7 +67,10 @@ public class GameManager : MonoBehaviour
     public void SetMoves(int moves)
     {
         currentMoves = moves;
-        //ChangeState(GameState.Playing); // Level yüklenince otomatik Playing'e geç 
+        
+        // Yeni level başladığında bayrakları sıfırla
+        isWinPending = false;
+        isLosePending = false;
     }
 
     public void DecreaseMove()
@@ -75,14 +82,41 @@ public class GameManager : MonoBehaviour
 
         if (currentMoves <= 0)
         {
-            ChangeState(GameState.GameOver);
+            // Hamle bitti, bayrağı kaldır ama şelale devam ediyorsa bekle
+            isLosePending = true;
         }
     }
 
     public void WinGame()
     {
         if (CurrentState != GameState.Playing) return;
-        ChangeState(GameState.LevelComplete);
+        
+        // Anında state değiştirmek yerine bayrağı kaldır ve durumu değerlendir
+        isWinPending = true;
+        EvaluateGameEnd(); 
+    }
+
+    /// <summary>
+    /// Şelale bittiğinde veya hedef vurulduğunda çağrılır.
+    /// Kazanma/Kaybetme durumunu (animasyonlar bittiyse) uygular.
+    /// </summary>
+    public void EvaluateGameEnd()
+    {
+        // 1. KURAL: Eğer tahtada hala animasyon veya şelale devam ediyorsa BÖLME! (Bekle)
+        if (BoardOrchestrator.Instance != null && BoardOrchestrator.Instance.IsAnimating) return;
+
+        // 2. KURAL: Animasyonlar bitti, artık tabloya bakabiliriz.
+        // Kazanma durumu HER ZAMAN kaybetmekten (hamle bitmesinden) önceliklidir!
+        if (isWinPending)
+        {
+            ChangeState(GameState.LevelComplete);
+            isWinPending = false;
+        }
+        else if (isLosePending)
+        {
+            ChangeState(GameState.GameOver);
+            isLosePending = false;
+        }
     }
 
     public bool CanPlay()

@@ -33,6 +33,10 @@ public class BoardManager : MonoBehaviour
     /// </summary>
     public void InitializeBoard(LevelData levelData)
     {
+        //Önceki level'ı temizle
+
+        ClearBoard();
+        
         width = levelData.width;
         height = levelData.height;
 
@@ -119,6 +123,41 @@ public class BoardManager : MonoBehaviour
         }
         
         Debug.Log("<color=cyan>[BoardManager]</color> Board Filled with Safe Items!");
+    }
+
+    /// <summary>
+    /// Sahnede var olan eski tahtayı, taşları ve grid verilerini tamamen temizler.
+    /// </summary>
+    public void ClearBoard()
+    {
+        if (grid != null)
+        {
+            // 1. Grid üzerindeki tüm taşları (Item) bul ve Object Pool'a (Havuza) iade et
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    if (grid[x, y] != null && grid[x, y].HasItem)
+                    {
+                        Item itemToReturn = grid[x, y].ExtractItem();
+                        
+                        // Taşın ölçeğini sıfırlayıp havuza gönderiyoruz ki bir sonraki levele temiz gitsin
+                        itemToReturn.transform.localScale = Vector3.one; 
+                        ItemPool.Instance.ReturnItem(itemToReturn);
+                    }
+                }
+            }
+            // 2. Eski grid verisini hafızadan sil
+            grid = null; 
+        }
+
+        // 3. Altımızdaki kare zemin (Tile) görsellerini yok et
+        if (visualController != null)
+        {
+            visualController.ClearTiles();
+        }
+
+        Debug.Log("<color=red>[BoardManager]</color> Eski tahta tamamen yıkıldı ve temizlendi!");
     }
 
     private bool CausesMatch(int x, int y, ItemType type)

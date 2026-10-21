@@ -115,6 +115,7 @@ public class UIManager : MonoBehaviour, IGameStateListener
     public void Btn_Home()
     {
         if (GameManager.Instance != null) GameManager.Instance.ChangeState(GameState.Menu);
-        // TODO: İleride burada tahtadaki taşları silen "BoardManager.Instance.ClearBoard()" metodunu tetikleyeceğiz.
+        
+        if (BoardManager.Instance != null) BoardManager.Instance.ClearBoard(); 
     }
 }
