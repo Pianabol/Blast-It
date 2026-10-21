@@ -17,9 +17,18 @@ public class InputManager : MonoBehaviour
 
     private void Update()
     {
+        // Fare tıklaması (veya dokunmatik ekran) kontrolü
         if (Input.GetMouseButtonDown(0))
         {
             HandleClick(Input.mousePosition);
+        }
+
+        // ==========================================
+        // YENİ: MANUEL SHUFFLE TEST TETİKLEYİCİSİ
+        // ==========================================
+        if (Input.GetKeyDown(KeyCode.S))
+        {
+            TriggerManualShuffle();
         }
     }
 
@@ -52,6 +61,34 @@ public class InputManager : MonoBehaviour
             {
                 Debug.Log("<color=grey>[INPUT]</color> Tahta sınırları dışına tıklandı.");
             }
+        }
+    }
+
+    /// <summary>
+    /// Klavyeden 'S' tuşuna basıldığında karıştırma algoritmasını zorla çalıştırır.
+    /// </summary>
+    private void TriggerManualShuffle()
+    {
+        // Güvenlik Kilidi 1: Oyun oynanabilir durumda değilse (Menüde veya GameOver ise) engelle
+        if (GameManager.Instance != null && !GameManager.Instance.CanPlay()) 
+        {
+            Debug.LogWarning("<color=yellow>[INPUT]</color> Oyun aktif değil, Shuffle yapılamaz.");
+            return;
+        }
+
+        // Güvenlik Kilidi 2: Tahtada halihazırda bir patlama/şelale animasyonu devam ediyorsa engelle
+        if (BoardOrchestrator.Instance != null && BoardOrchestrator.Instance.IsAnimating) 
+        {
+            Debug.LogWarning("<color=yellow>[INPUT]</color> Animasyon devam ederken Shuffle yapılamaz.");
+            return;
+        }
+
+        Debug.Log("<color=magenta>[INPUT]</color> Manuel Shuffle Testi Tetiklendi!");
+        
+        // Coroutine'i BoardManager üzerinden başlatıyoruz ki yaşam döngüsü tahtaya bağlı kalsın
+        if (BoardManager.Instance != null)
+        {
+            BoardManager.Instance.StartCoroutine(BoardManager.Instance.ShuffleBoardRoutine());
         }
     }
 }

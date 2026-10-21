@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class BoardManager : MonoBehaviour
@@ -36,7 +38,7 @@ public class BoardManager : MonoBehaviour
         //Önceki level'ı temizle
 
         ClearBoard();
-        
+
         width = levelData.width;
         height = levelData.height;
 
@@ -158,6 +160,63 @@ public class BoardManager : MonoBehaviour
         }
 
         Debug.Log("<color=red>[BoardManager]</color> Eski tahta tamamen yıkıldı ve temizlendi!");
+    }
+
+    // ====================================================================
+    // YENİ: TAHTA KARIŞTIRMA (SHUFFLE) SİSTEMİ
+    // ====================================================================
+
+    /// <summary>
+    /// Tahtadaki tüm taşları rastgele karıştırır ve yeni yerlerine uçurur.
+    /// </summary>
+    public IEnumerator ShuffleBoardRoutine()
+    {
+        Debug.Log("<color=yellow>[BoardManager]</color> Tahta Karıştırılıyor (Shuffle)...");
+
+        List<Item> allItems = new List<Item>();
+        List<Cell> validCells = new List<Cell>();
+
+        // 1. Oynanabilir tüm hücreleri ve içindeki taşları topla
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                Cell cell = grid[x, y];
+                if (cell != null && cell.IsPlayable && cell.HasItem)
+                {
+                    allItems.Add(cell.ExtractItem()); // Taşı hücreden kopar
+                    validCells.Add(cell);
+                }
+            }
+        }
+
+        // 2. Fisher-Yates Algoritması ile taşları listende karıştır
+        for (int i = 0; i < allItems.Count; i++)
+        {
+            Item temp = allItems[i];
+            int randomIndex = Random.Range(i, allItems.Count);
+            allItems[i] = allItems[randomIndex];
+            allItems[randomIndex] = temp;
+        }
+
+        // 3. Karıştırılan taşları hücrelere geri dağıt ve hareket ettir (LeanTween)
+        float shuffleDuration = 0.5f;
+        for (int i = 0; i < validCells.Count; i++)
+        {
+            Cell cell = validCells[i];
+            Item item = allItems[i];
+
+            cell.SetItem(item);
+            item.UpdateCoordinates(cell.X, cell.Y);
+
+            Vector3 targetPos = GridToWorldPosition(cell.X, cell.Y);
+            targetPos.y = 0.5f; // Tahtanın üzerindeki varsayılan yükseklik
+
+            LeanTween.move(item.gameObject, targetPos, shuffleDuration).setEaseInOutBack();
+        }
+
+        // Animasyonların bitmesini bekle
+        yield return new WaitForSeconds(shuffleDuration + 0.1f);
     }
 
     private bool CausesMatch(int x, int y, ItemType type)

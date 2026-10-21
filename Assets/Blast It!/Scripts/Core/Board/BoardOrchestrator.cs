@@ -85,6 +85,58 @@ public class BoardOrchestrator : MonoBehaviour
         LeanTween.scale(itemObj, Vector3.one, 0.15f).setEaseInQuad();
     }
 
+    /// <summary>
+    /// Patlatma, Yerçekimi ve Zincirleme Reaksiyon (Cascade) döngüsünü yönetir.
+    /// </summary>
+    private IEnumerator ProcessBoardRoutine(List<Cell> matchesToResolve)
+    {
+        List<Cell> currentMatches = matchesToResolve;
+
+        // Ekranda eşleşecek taş kalmayana kadar bu döngü dönecek (Zincirleme Kombo)
+        while (currentMatches.Count > 0)
+        {
+            // 1. Taşları yok et
+            yield return StartCoroutine(DestroyMatchesRoutine(currentMatches));
+
+            // 2. Tahtadaki taşları düşür ve yeni taş üret
+            yield return StartCoroutine(BoardGravity.Instance.ApplyGravityRoutine());
+
+            // 3. Yerçekimi bittikten sonra tahtada yeni eşleşme oldu mu diye tara (Cascade)
+            currentMatches = MatchDetector.Instance.FindAllMatches();
+            
+            if (currentMatches.Count > 0)
+            {
+                Debug.Log($"<color=magenta>[Cascade]</color> Zincirleme reaksiyon! {currentMatches.Count} taş daha patlıyor.");
+            }
+        }
+
+        // ====================================================================
+        // YENİ: DEADLOCK VE SHUFFLE KONTROLÜ
+        // ====================================================================
+        // Şelale duruldu. Peki oyuncunun yapabileceği bir hamle (Sahte Takas) var mı?
+        while (!MatchDetector.Instance.HasAvailableMove())
+        {
+            // Hamle yoksa tahtayı karıştır
+            yield return StartCoroutine(BoardManager.Instance.ShuffleBoardRoutine());
+            
+            // Karıştırdıktan sonra tesadüfen 3'lü eşleşme olmuş olabilir! Kontrol et.
+            currentMatches = MatchDetector.Instance.FindAllMatches();
+            
+            if (currentMatches.Count > 0)
+            {
+                Debug.Log("<color=magenta>[Shuffle Cascade]</color> Karıştırma sonrası yeni eşleşmeler oluştu, patlatılıyor!");
+                // Eğer eşleşme varsa tekrar aynı cascade döngüsüne gir
+                while (currentMatches.Count > 0)
+                {
+                    yield return StartCoroutine(DestroyMatchesRoutine(currentMatches));
+                    yield return StartCoroutine(BoardGravity.Instance.ApplyGravityRoutine());
+                    currentMatches = MatchDetector.Instance.FindAllMatches();
+                }
+            }
+            // Bu büyük While döngüsü, hamle kalana kadar veya oyun kazanılana kadar "Karıştır -> Varsa Patlat -> Hamle Kontrol Et" şeklinde döner.
+        }
+    }
+
     private IEnumerator SwapRoutine(Cell cellA, Cell cellB)
     {
         IsAnimating = true;
@@ -142,32 +194,6 @@ public class BoardOrchestrator : MonoBehaviour
 
             // YENİ: Dev şelale bitti, tahta tamamen duruldu. Hakemi çağır!
             if (GameManager.Instance != null) GameManager.Instance.EvaluateGameEnd();
-        }
-    }
-
-    /// <summary>
-    /// Patlatma, Yerçekimi ve Zincirleme Reaksiyon (Cascade) döngüsünü yönetir.
-    /// </summary>
-    private IEnumerator ProcessBoardRoutine(List<Cell> matchesToResolve)
-    {
-        List<Cell> currentMatches = matchesToResolve;
-
-        // Ekranda eşleşecek taş kalmayana kadar bu döngü dönecek (Zincirleme Kombo)
-        while (currentMatches.Count > 0)
-        {
-            // 1. Taşları yok et
-            yield return StartCoroutine(DestroyMatchesRoutine(currentMatches));
-
-            // 2. Tahtadaki taşları düşür ve yeni taş üret
-            yield return StartCoroutine(BoardGravity.Instance.ApplyGravityRoutine());
-
-            // 3. Yerçekimi bittikten sonra tahtada yeni eşleşme oldu mu diye tara (Cascade)
-            currentMatches = MatchDetector.Instance.FindAllMatches();
-            
-            if (currentMatches.Count > 0)
-            {
-                Debug.Log($"<color=magenta>[Cascade]</color> Zincirleme reaksiyon! {currentMatches.Count} taş daha patlıyor.");
-            }
         }
     }
 
