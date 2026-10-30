@@ -71,6 +71,12 @@ public class BoardManager : MonoBehaviour
             visualController.GenerateBoardVisuals(width, height, cellSize, grid);
         }
 
+        //2.5 AŞAMA: Çerçeveleri (Borders) oluştur
+        if (BoardBorderManager.Instance != null)
+        {
+            BoardBorderManager.Instance.GenerateBorders();
+        }
+
         // 3. AŞAMA: Tahtayı Taşlarla Doldur
         FillBoardWithRandomItems();
     }
@@ -158,6 +164,11 @@ public class BoardManager : MonoBehaviour
         {
             visualController.ClearTiles();
         }
+        
+        if (BoardBorderManager.Instance != null)
+        {
+            BoardBorderManager.Instance.ClearBorders();
+        }    
 
         Debug.Log("<color=red>[BoardManager]</color> Eski tahta tamamen yıkıldı ve temizlendi!");
     }
