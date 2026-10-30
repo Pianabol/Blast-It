@@ -8,11 +8,8 @@ public class BoardVisualController : MonoBehaviour
     [Header("Hierarchy Containers")]
     [SerializeField] private Transform tilesRoot;
 
-    [Header("Visual Settings")]
-    [SerializeField] private Color colorA = new Color(0.8f, 0.8f, 0.8f);
-    [SerializeField] private Color colorB = new Color(0.6f, 0.6f, 0.6f);
+    // Renk değişkenlerini (colorA, colorB) sildik!
 
-    // DİKKAT: Artık 4. parametre olarak Cell[,] grid alıyoruz
     public void GenerateBoardVisuals(int width, int height, float cellSize, Cell[,] grid)
     {
         if (tilePrefab == null || tilesRoot == null) return;
@@ -25,7 +22,6 @@ public class BoardVisualController : MonoBehaviour
             {
                 Cell cell = grid[x, y];
 
-                // Eğer hücre VOID (Boşluk) ise oraya zemin çizme, es geç!
                 if (cell.Type == CellType.Void)
                 {
                     continue;
@@ -36,16 +32,13 @@ public class BoardVisualController : MonoBehaviour
                 Tile newTile = Instantiate(tilePrefab, tilePos, Quaternion.identity, tilesRoot);
                 newTile.name = $"Tile_{x}_{y}";
 
-                // TODO: İleride Obstacle ise farklı bir renk/prefab basacağız. Şimdilik düz zemin çiziyoruz.
-
-                bool isEven = (x + y) % 2 == 0;
-                newTile.SetColor(isEven ? colorA : colorB);
-                
-                newTile.transform.localScale = new Vector3(cellSize, 0.15f, cellSize); 
+                // Y eksenindeki 0.15f ezme işlemini sildik! Artık modelin kendi orijinal kalınlığı korunacak.
+                // Sadece X ve Z eksenlerinde hücre boyutuna göre scale ediyoruz, Y eksenini 1 bırakıyoruz.
+                newTile.transform.localScale = new Vector3(cellSize, 1f, cellSize); 
             }
         }
         
-        Debug.Log("<color=cyan>[BoardVisualController]</color> Board Visuals Generated!");
+        Debug.Log("<color=cyan>[BoardVisualController]</color> Board Visuals Generated with Glass Tiles!");
     }
 
     public void ClearTiles()
