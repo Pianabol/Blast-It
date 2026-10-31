@@ -227,14 +227,41 @@ public class BoardOrchestrator : MonoBehaviour
 
         yield return new WaitForSeconds(0.2f);
 
+        // =========================================================
+        // YENİ: KOMŞU (ADJACENT) RADARI
+        // =========================================================
+        HashSet<GoalItem> collectedGoals = new HashSet<GoalItem>();
+
+        foreach (Cell cell in matches)
+        {
+            Vector2Int[] neighbors = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+            foreach (var dir in neighbors)
+            {
+                Cell neighborCell = BoardManager.Instance.GetCell(cell.X + dir.x, cell.Y + dir.y);
+                
+                // Eğer komşuda bir Hedef (Kupa/Saat) varsa onu listeye ekle
+                if (neighborCell != null && neighborCell.HasGoalItem)
+                {
+                    // HashSet kullandığımız için, 2 farklı patlayan taş aynı Kupaya değiyorsa bile sadece 1 kez listeye eklenir
+                    collectedGoals.Add(neighborCell.CurrentGoalItem); 
+                }
+            }
+        }
+
+        // Toplanan hedefleri tahtadan sök ve Collect() çağır
+        foreach (GoalItem goal in collectedGoals)
+        {
+            Cell cell = BoardManager.Instance.GetCell(goal.X, goal.Y);
+            if (cell != null) cell.ExtractGoalItem(); // Tahtadan bağını kopar
+            goal.Collect(); // Skoru düşür ve yok ol
+        }
+        // =========================================================
+
         foreach (Cell cell in matches)
         {
             Item itemToDestroy = cell.ExtractItem();
             if (itemToDestroy != null)
             {
-                // DİKKAT: Eski DecreaseGoal satırı BURADAN SİLİNDİ! 
-                // Çünkü normal patlayan taşlar (Item) artık hedef sayılamaz.
-                
                 itemToDestroy.transform.localScale = Vector3.one;
                 ItemPool.Instance.ReturnItem(itemToDestroy);
             }

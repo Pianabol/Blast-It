@@ -52,5 +52,6 @@ public class Item : MonoBehaviour
             LeanTween.move(gameObject, targetPosition, duration).setEaseInOutQuad();
         }
     }
+    //test.
     
 }

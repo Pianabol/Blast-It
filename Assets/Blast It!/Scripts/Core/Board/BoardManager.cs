@@ -37,6 +37,14 @@ public class BoardManager : MonoBehaviour
     {
         ClearBoard();
 
+        // =========================================================
+        // YENİ: Havuza bu levelda hangi renklerin serbest olduğunu bildir
+        if (ItemPool.Instance != null && levelData.allowedItemTypes != null)
+        {
+            ItemPool.Instance.SetAllowedItems(levelData.allowedItemTypes);
+        }
+        // =========================================================
+
         width = levelData.width;
         height = levelData.height;
         grid = new Cell[width, height];
@@ -58,7 +66,7 @@ public class BoardManager : MonoBehaviour
         if (visualController != null) visualController.GenerateBoardVisuals(width, height, cellSize, grid);
         if (BoardBorderManager.Instance != null) BoardBorderManager.Instance.GenerateBorders();
 
-        // 2. AŞAMA (YENİ): Grid Painter ile çizilen Hedefleri (Kupa, Saat) tahtaya dik!
+        // 2. AŞAMA: Grid Painter ile çizilen Hedefleri (Kupa, Saat) tahtaya dik!
         SpawnGoalItemsFromData(levelData);
 
         // 3. AŞAMA: Kalan boşlukları (IsEmpty) Normal Taşlarla Doldur

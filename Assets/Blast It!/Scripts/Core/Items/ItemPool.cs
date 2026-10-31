@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class ItemPool : MonoBehaviour
 {
-    // Her yerden kolayca erişmek için Singleton yapıyoruz
     public static ItemPool Instance { get; private set; }
 
     [Header("Pool Settings")]
@@ -15,8 +14,10 @@ public class ItemPool : MonoBehaviour
     [Tooltip("Havuzdaki objelerin duracağı yer. Hierarchy'i temiz tutar.")]
     [SerializeField] private Transform poolRoot; 
 
-    // Objeleri tiplerine (renklerine) göre ayrı ayrı kuyruklarda tutan Sözlük (Dictionary)
     private Dictionary<ItemType, Queue<Item>> poolDictionary;
+    
+    // YENİ: Bu levelda düşmesine izin verilen renklerin listesi
+    private List<ItemType> allowedItemTypes = new List<ItemType>();
 
     private void Awake()
     {
@@ -30,14 +31,12 @@ public class ItemPool : MonoBehaviour
     {
         poolDictionary = new Dictionary<ItemType, Queue<Item>>();
 
-        // Eğer Inspector'dan poolRoot atanmamışsa, kod ile otomatik oluştur.
         if (poolRoot == null)
         {
             poolRoot = new GameObject("PoolRoot").transform;
             poolRoot.SetParent(transform);
         }
 
-        // Listeye verdiğimiz her bir prefab için ayrı bir havuz oluştur
         foreach (Item prefab in itemPrefabs)
         {
             ItemType type = prefab.Type;
@@ -46,7 +45,7 @@ public class ItemPool : MonoBehaviour
             for (int i = 0; i < initialSizePerType; i++)
             {
                 Item newObj = Instantiate(prefab, poolRoot);
-                newObj.gameObject.SetActive(false); // Başlangıçta hepsi uykuda
+                newObj.gameObject.SetActive(false); 
                 objectPool.Enqueue(newObj);
             }
 
@@ -56,22 +55,33 @@ public class ItemPool : MonoBehaviour
         Debug.Log("<color=green>[ItemPool]</color> Tüm taşlar havuzda uykuya yatırıldı.");
     }
 
+    // YENİ: BoardManager oyun başlarken bu metodu çağırıp izin verilen renkleri belirler
+    public void SetAllowedItems(List<ItemType> newAllowedItems)
+    {
+        allowedItemTypes = newAllowedItems;
+        Debug.Log($"<color=green>[ItemPool]</color> Havuz filtrelendi. Bu levelda {allowedItemTypes.Count} çeşit renk kullanılacak.");
+    }
+
     /// <summary>
-    /// Tahtayı doldururken rastgele renkte bir taş verir.
+    /// Tahtayı doldururken SADECE İZİN VERİLEN (Allowed) renklerden rastgele bir taş verir.
     /// </summary>
     public Item GetRandomItem()
     {
         if (itemPrefabs.Length == 0) return null;
 
-        int randomIndex = Random.Range(0, itemPrefabs.Length);
-        ItemType randomType = itemPrefabs[randomIndex].Type;
+        // YENİ: Eğer liste boşsa (tasarımcı hata yaptıysa) güvenlik olarak eski sisteme dönüp tüm renklerden birini seç.
+        if (allowedItemTypes == null || allowedItemTypes.Count == 0)
+        {
+            Debug.LogWarning("[ItemPool] Allowed Items listesi boş! Havuzdan kısıtlamasız rastgele taş çekiliyor.");
+            int randomIndex = Random.Range(0, itemPrefabs.Length);
+            return GetItem(itemPrefabs[randomIndex].Type);
+        }
 
+        // Tasarımcının belirlediği listeden rastgele bir renk seç
+        ItemType randomType = allowedItemTypes[Random.Range(0, allowedItemTypes.Count)];
         return GetItem(randomType);
     }
 
-    /// <summary>
-    /// İstenilen spesifik renkteki (tipteki) taşı uyandırır ve verir.
-    /// </summary>
     public Item GetItem(ItemType type)
     {
         if (!poolDictionary.ContainsKey(type))
@@ -89,29 +99,21 @@ public class ItemPool : MonoBehaviour
         }
         else
         {
-            // Eğer inanılmaz bir kombo oldu ve ekrandaki 20 sarı taş da kullanılıyorsa, 21.yi anında üretiriz (Expand).
             Debug.LogWarning($"[ItemPool] {type} havuzu yetersiz kaldı! Yeni obje üretiliyor.");
             Item prefabToSpawn = GetPrefabByType(type);
             itemToReuse = Instantiate(prefabToSpawn, poolRoot);
         }
 
-        // Objeyi uyandır ve ayarlarını sıfırla
         itemToReuse.gameObject.SetActive(true);
         itemToReuse.Initialize(type);
         
         return itemToReuse;
     }
 
-    /// <summary>
-    /// Patlayan veya yok olması gereken taşı havuza geri gönderir.
-    /// </summary>
     public void ReturnItem(Item item)
     {
-        item.gameObject.SetActive(false); // Objeyi kapat
-        item.transform.position = poolRoot.position; // Göz önünden çek
-        
-        // DİKKAT: Burada SetParent(poolRoot) YAPMIYORUZ! 
-        // Hierarchy'de nerede duruyorsa orada kalsın, SetParent mobil cihazlarda FPS düşürür.
+        item.gameObject.SetActive(false); 
+        item.transform.position = poolRoot.position; 
 
         if (poolDictionary.ContainsKey(item.Type))
         {

@@ -23,12 +23,13 @@ public class GoalItem : MonoBehaviour, ICollectible
 
     public void Collect()
     {
-        Debug.Log($"<color=orange>[GoalItem]</color> {goalType} toplandı!");
-        
-        // TODO: UI'a (Sol üstteki hedef tahtasına) uçma animasyonu eklenecek
-        // TODO: GoalManager'a hedefin sayısını 1 düşürmesi söylenecek
-        
-        // Şimdilik toplandığı an direkt havuza geri gönderiyoruz
+        // Hedefi skordan düşür
+        if (GoalManager.Instance != null)
+        {
+            GoalManager.Instance.DecreaseGoal(goalType);
+        }
+
+        // Şimdilik anında havuza dönüyor (Sonraki adımda UI'a uçuracağız)
         GoalItemPool.Instance.ReturnItem(this);
     }
 }

@@ -30,6 +30,11 @@ public class LevelData : ScriptableObject
     public int totalMoves = 20;
     public List<LevelGoal> levelGoals;
 
+    // YENİ: Bu bölümde düşmesine izin verilen renkli taşlar
+    [Header("Allowed Items")]
+    [Tooltip("Bu levelda havadan düşecek ve dizilecek taş türleri. Dar alanlarda 3-4 çeşitte tutmak bölümü akıcı yapar.")]
+    public List<ItemType> allowedItemTypes;
+
     // 1. Dizi: Zemin türü (Normal, Void, Obstacle)
     [HideInInspector] public CellType[] gridLayout;
     

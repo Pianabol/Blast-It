@@ -6,19 +6,15 @@ public class LevelDataEditor : Editor
 {
     private LevelData levelData;
     
-    // İki farklı fırça tutacağız
     private CellType selectedCellBrush = CellType.Normal;
     private GoalType selectedGoalBrush = GoalType.None;
     
-    // Boyama modu
     private enum PaintMode { BaseLayer, GoalLayer }
     private PaintMode currentMode = PaintMode.BaseLayer;
 
     private readonly Color colorNormal = new Color(0.8f, 0.8f, 0.8f);
     private readonly Color colorObstacle = new Color(0.4f, 0.2f, 0.0f);
     private readonly Color colorVoid = new Color(0.1f, 0.1f, 0.1f);
-    
-    // Hedefler için dikkat çekici bir renk
     private readonly Color colorGoal = new Color(1f, 0.8f, 0.2f); 
 
     private void OnEnable()
@@ -30,7 +26,6 @@ public class LevelDataEditor : Editor
     {
         serializedObject.Update();
 
-        // Boyut ve Temel ayarlar kısmı (Kendi kodundan aynen kalıyor)
         EditorGUI.BeginChangeCheck();
         int newWidth = EditorGUILayout.IntSlider("Width", levelData.width, 3, 12);
         int newHeight = EditorGUILayout.IntSlider("Height", levelData.height, 3, 12);
@@ -46,6 +41,10 @@ public class LevelDataEditor : Editor
         EditorGUILayout.PropertyField(serializedObject.FindProperty("totalMoves"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("levelGoals"), true);
 
+        // YENİ: Allowed Items Listesini Inspector'a çizdir
+        EditorGUILayout.Space();
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("allowedItemTypes"), true);
+
         if (levelData.gridLayout == null || levelData.gridLayout.Length != levelData.width * levelData.height || 
             levelData.goalLayout == null || levelData.goalLayout.Length != levelData.width * levelData.height)
         {
@@ -55,7 +54,6 @@ public class LevelDataEditor : Editor
         EditorGUILayout.Space(15);
         EditorGUILayout.LabelField("--- LEVEL DESIGNER (GRID PAINTER) ---", EditorStyles.boldLabel);
         
-        // Mod Seçici (Zemin mi boyayacağız, Üstüne eşya mı koyacağız?)
         currentMode = (PaintMode)GUILayout.Toolbar((int)currentMode, new string[] { "Base Layer (Void/Obstacle)", "Goal Layer (Items)" });
         EditorGUILayout.Space();
 
@@ -79,7 +77,7 @@ public class LevelDataEditor : Editor
                 if (GUILayout.Button(type.ToString(), GUILayout.Height(30))) selectedCellBrush = type;
             }
         }
-        else // Goal Layer
+        else
         {
             foreach (GoalType type in System.Enum.GetValues(typeof(GoalType)))
             {
@@ -108,12 +106,11 @@ public class LevelDataEditor : Editor
                 CellType currentCellType = levelData.gridLayout[index];
                 GoalType currentGoalType = levelData.goalLayout[index];
 
-                // Görüntüyü ayarlama
                 string buttonText = "";
                 if (currentGoalType != GoalType.None)
                 {
-                    GUI.backgroundColor = colorGoal; // Üstünde hedef (Goal) varsa altın sarısı yap
-                    buttonText = currentGoalType.ToString().Substring(0, 1); // İlk harfini yaz (Örn: Coin için "C")
+                    GUI.backgroundColor = colorGoal;
+                    buttonText = currentGoalType.ToString().Substring(0, 1);
                 }
                 else
                 {
@@ -132,11 +129,11 @@ public class LevelDataEditor : Editor
                     if (currentMode == PaintMode.BaseLayer)
                     {
                         levelData.gridLayout[index] = selectedCellBrush;
-                        if (selectedCellBrush == CellType.Void) levelData.goalLayout[index] = GoalType.None; // Void olan yerde eşya duramaz
+                        if (selectedCellBrush == CellType.Void) levelData.goalLayout[index] = GoalType.None;
                     }
                     else if (currentMode == PaintMode.GoalLayer)
                     {
-                        if (currentCellType != CellType.Void) // Boşluğa eşya koyulamaz
+                        if (currentCellType != CellType.Void)
                         {
                             levelData.goalLayout[index] = selectedGoalBrush;
                         }
