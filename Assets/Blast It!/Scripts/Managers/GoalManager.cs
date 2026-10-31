@@ -9,6 +9,7 @@ public class GoalManager : MonoBehaviour
 
     public event Action<Dictionary<GoalType, int>> OnGoalsSet;
     public event Action<GoalType, int> OnGoalDecreased;
+    public event Action<GoalType, Vector3> OnGoalCollected;
 
     private Dictionary<GoalType, int> activeGoals = new Dictionary<GoalType, int>();
     
@@ -45,6 +46,23 @@ public class GoalManager : MonoBehaviour
         
         Debug.Log($"<color=yellow>[GoalManager]</color> Hedefler yüklendi! Toplam {activeGoals.Count} farklı görev var.");
         OnGoalsSet?.Invoke(activeGoals);
+    }
+
+
+    public void CollectGoal(GoalType type, Vector3 worldPosition)
+    {
+        if (type == GoalType.None ||
+            !activeGoals.TryGetValue(type, out int remaining) ||
+            remaining <= 0)
+        {
+            return;
+        }
+
+        // Visual systems receive the collection information.
+        OnGoalCollected?.Invoke(type, worldPosition);
+
+        // Gameplay data is updated independently of the animation.
+        DecreaseGoal(type);
     }
 
     public void DecreaseGoal(GoalType type)

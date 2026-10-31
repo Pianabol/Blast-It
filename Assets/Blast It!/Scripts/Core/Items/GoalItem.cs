@@ -21,15 +21,26 @@ public class GoalItem : MonoBehaviour, ICollectible
         LeanTween.move(gameObject, targetPosition, duration).setEaseInQuad();
     }
 
+    
     public void Collect()
     {
-        // Hedefi skordan düşür
+        // Hedefin mevcut dünya konumunu kaydet.
+        Vector3 collectionPosition = transform.position;
+
+        // Toplama işlemini GoalManager'a bildir.
         if (GoalManager.Instance != null)
         {
-            GoalManager.Instance.DecreaseGoal(goalType);
+            GoalManager.Instance.CollectGoal(
+                goalType,
+                collectionPosition
+            );
         }
 
-        // Şimdilik anında havuza dönüyor (Sonraki adımda UI'a uçuracağız)
+        // Varsa devam eden hareket animasyonunu iptal et.
+        LeanTween.cancel(gameObject);
+
+        // Gerçek 3D objeyi havuza geri gönder.
         GoalItemPool.Instance.ReturnItem(this);
     }
+
 }

@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class GoalUIManager : MonoBehaviour
 {
+    public static GoalUIManager Instance { get; private set; }
+
     [Header("UI References")]
     [SerializeField] private Transform goalsContainer; 
     [SerializeField] private GoalUIItem goalItemPrefab; 
@@ -29,6 +31,15 @@ public class GoalUIManager : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
         // 1. Liste formatındaki database'i oyunda hızlı erişim için Dictionary'e çevir
         foreach (var map in spriteDatabaseList)
         {
@@ -124,4 +135,24 @@ public class GoalUIManager : MonoBehaviour
             uiItem.PlayUpdateAnimation(remainingAmount);
         }
     } 
+
+    public bool TryGetGoalIcon(
+        GoalType type,
+        out RectTransform iconRect,
+        out Sprite iconSprite)
+    {
+        iconRect = null;
+        iconSprite = null;
+
+        if (!activeUIItems.TryGetValue(type, out GoalUIItem uiItem))
+            return false;
+
+        if (uiItem == null || !uiItem.gameObject.activeInHierarchy)
+            return false;
+
+        iconRect = uiItem.IconRect;
+        iconSprite = uiItem.IconSprite;
+
+        return iconRect != null && iconSprite != null;
+    }
 }
