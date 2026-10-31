@@ -35,50 +35,64 @@ public class BoardManager : MonoBehaviour
     /// </summary>
     public void InitializeBoard(LevelData levelData)
     {
-        //Önceki level'ı temizle
-
         ClearBoard();
 
         width = levelData.width;
         height = levelData.height;
-
         grid = new Cell[width, height];
 
         Vector3 offset = new Vector3((width - 1) * cellSize / 2f, 0f, (height - 1) * cellSize / 2f);
         boardRoot.position = -offset;
 
-        // 1. AŞAMA: LevelData'dan Grid (Void/Obstacle) haritasını oku ve hücreleri oluştur
+        // 1. AŞAMA: Hücreleri ve Zemin Tiplerini (Void/Obstacle) oluştur
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
                 CellType type = levelData.GetCellType(x, y);
                 grid[x, y] = new Cell(x, y, type);
-
-                // DİKKAT: Void veya Obstacle ise buraya taş gelemez!
-                if (type == CellType.Void || type == CellType.Obstacle)
-                {
-                    grid[x, y].IsPlayable = false;
-                }
+                if (type == CellType.Void || type == CellType.Obstacle) grid[x, y].IsPlayable = false;
             }
         }
 
-        Debug.Log($"<color=green>[BoardManager]</color> Board Initialized (Data-Driven): {width}x{height}");
+        if (visualController != null) visualController.GenerateBoardVisuals(width, height, cellSize, grid);
+        if (BoardBorderManager.Instance != null) BoardBorderManager.Instance.GenerateBorders();
 
-        // 2. AŞAMA: Görselleri çiz (Void/Obstacle görselleri de eklenecek)
-        if (visualController != null)
-        {
-            visualController.GenerateBoardVisuals(width, height, cellSize, grid);
-        }
+        // 2. AŞAMA (YENİ): Grid Painter ile çizilen Hedefleri (Kupa, Saat) tahtaya dik!
+        SpawnGoalItemsFromData(levelData);
 
-        //2.5 AŞAMA: Çerçeveleri (Borders) oluştur
-        if (BoardBorderManager.Instance != null)
-        {
-            BoardBorderManager.Instance.GenerateBorders();
-        }
-
-        // 3. AŞAMA: Tahtayı Taşlarla Doldur
+        // 3. AŞAMA: Kalan boşlukları (IsEmpty) Normal Taşlarla Doldur
         FillBoardWithRandomItems();
+    }
+
+    private void SpawnGoalItemsFromData(LevelData levelData)
+    {
+        if (GoalItemPool.Instance == null) return;
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                Cell cell = grid[x, y];
+                if (!cell.IsPlayable) continue;
+
+                GoalType goalType = levelData.GetGoalType(x, y);
+                if (goalType != GoalType.None) // O hücreye hedef çizilmişse
+                {
+                    GoalItem newGoal = GoalItemPool.Instance.GetItem(goalType);
+                    if (newGoal != null)
+                    {
+                        cell.SetGoalItem(newGoal);
+                        newGoal.UpdateCoordinates(x, y);
+
+                        Vector3 targetPos = GridToWorldPosition(x, y);
+                        targetPos.y = 0.5f;
+                        newGoal.transform.position = targetPos;
+                    }
+                }
+            }
+        }
+        Debug.Log("<color=cyan>[BoardManager]</color> Editor hedefleri sahneye yerleştirildi!");
     }
 
     private void FillBoardWithRandomItems()
@@ -91,8 +105,8 @@ public class BoardManager : MonoBehaviour
             {
                 Cell cell = grid[x, y];
 
-                // DİKKAT: Sadece IsPlayable olan (Normal) hücrelere taş koy
-                if (cell.IsPlayable && !cell.HasItem)
+                // DİKKAT: Artık !cell.HasItem değil, cell.IsEmpty kullanıyoruz! (Goal varsa ezmesin)
+                if (cell.IsPlayable && cell.IsEmpty) 
                 {
                     Item newItem = null;
                     int maxAttempts = 100;
@@ -108,13 +122,9 @@ public class BoardManager : MonoBehaviour
                             ItemPool.Instance.ReturnItem(newItem);
                             newItem = null;
                         }
-
                     } while (newItem == null && attempts < maxAttempts);
 
-                    if (newItem == null)
-                    {
-                        newItem = ItemPool.Instance.GetRandomItem();
-                    }
+                    if (newItem == null) newItem = ItemPool.Instance.GetRandomItem();
 
                     if (newItem != null)
                     {
@@ -123,54 +133,46 @@ public class BoardManager : MonoBehaviour
 
                         Vector3 targetPos = GridToWorldPosition(x, y);
                         targetPos.y = 0.5f; 
-                        
                         newItem.MoveTo(targetPos, 0f);
                     }
                 }
             }
         }
-        
-        Debug.Log("<color=cyan>[BoardManager]</color> Board Filled with Safe Items!");
     }
 
-    /// <summary>
-    /// Sahnede var olan eski tahtayı, taşları ve grid verilerini tamamen temizler.
-    /// </summary>
     public void ClearBoard()
     {
         if (grid != null)
         {
-            // 1. Grid üzerindeki tüm taşları (Item) bul ve Object Pool'a (Havuza) iade et
             for (int x = 0; x < width; x++)
             {
                 for (int y = 0; y < height; y++)
                 {
-                    if (grid[x, y] != null && grid[x, y].HasItem)
+                    if (grid[x, y] != null)
                     {
-                        Item itemToReturn = grid[x, y].ExtractItem();
+                        // 1. Normal taşları temizle
+                        if (grid[x, y].HasItem)
+                        {
+                            Item itemToReturn = grid[x, y].ExtractItem();
+                            itemToReturn.transform.localScale = Vector3.one; 
+                            ItemPool.Instance.ReturnItem(itemToReturn);
+                        }
                         
-                        // Taşın ölçeğini sıfırlayıp havuza gönderiyoruz ki bir sonraki levele temiz gitsin
-                        itemToReturn.transform.localScale = Vector3.one; 
-                        ItemPool.Instance.ReturnItem(itemToReturn);
+                        // 2. GoalItem'ları (Kupa, Saat) temizle
+                        if (grid[x, y].HasGoalItem)
+                        {
+                            GoalItem goalToReturn = grid[x, y].ExtractGoalItem();
+                            goalToReturn.transform.localScale = Vector3.one;
+                            GoalItemPool.Instance.ReturnItem(goalToReturn);
+                        }
                     }
                 }
             }
-            // 2. Eski grid verisini hafızadan sil
             grid = null; 
         }
 
-        // 3. Altımızdaki kare zemin (Tile) görsellerini yok et
-        if (visualController != null)
-        {
-            visualController.ClearTiles();
-        }
-        
-        if (BoardBorderManager.Instance != null)
-        {
-            BoardBorderManager.Instance.ClearBorders();
-        }    
-
-        Debug.Log("<color=red>[BoardManager]</color> Eski tahta tamamen yıkıldı ve temizlendi!");
+        if (visualController != null) visualController.ClearTiles();
+        if (BoardBorderManager.Instance != null) BoardBorderManager.Instance.ClearBorders();
     }
 
     // ====================================================================

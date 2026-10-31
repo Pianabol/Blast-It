@@ -1,11 +1,10 @@
 using UnityEngine;
 
-// Hücrenin temel durumu. Şimdilik Boş ve Dolu yeterli, ileride Buz, Jöle eklenebilir.
 public enum CellType
 {
-    Normal,     // Taş konulabilir, oynanabilir hücre
-    Obstacle,   // Taş konulamaz duvar/engel
-    Void        // Tahta dışı (köşeleri boş haritalar için)
+    Normal,
+    Obstacle,
+    Void
 }
 
 public class Cell
@@ -14,10 +13,12 @@ public class Cell
     public int Y { get; private set; }
     public CellType Type { get; set; }
     
-    // O an bu hücrenin üzerinde duran blok/taş
+    // Hücredeki Normal Taş
     public Item CurrentItem { get; private set; }
+    
+    // YENİ: Hücredeki Hedef Eşya (Kupa, Saat vb.)
+    public GoalItem CurrentGoalItem { get; private set; } 
 
-    // DÜZELTME: Artık dışarıdan değer atanabilir (set) durumda
     public bool IsPlayable { get; set; }
 
     public Cell(int x, int y, CellType type = CellType.Normal)
@@ -26,18 +27,14 @@ public class Cell
         Y = y;
         Type = type;
         CurrentItem = null;
+        CurrentGoalItem = null;
         
-        // DÜZELTME: Başlangıç oynanabilirlik durumunu constructor içinde belirliyoruz
         IsPlayable = (type == CellType.Normal);
     }
 
-    // Hücreye yeni bir taş atar
-    public void SetItem(Item newItem)
-    {
-        CurrentItem = newItem;
-    }
-
-    // Hücredeki taşı boşaltır ve referansını döndürür (Düşme mekaniği için)
+    // --- NORMAL TAŞ METOTLARI ---
+    public void SetItem(Item newItem) => CurrentItem = newItem;
+    
     public Item ExtractItem()
     {
         Item extracted = CurrentItem;
@@ -45,6 +42,20 @@ public class Cell
         return extracted;
     }
 
-    // Hücrenin dolu olup olmadığını kontrol eder
+    // --- HEDEF (GOAL) METOTLARI ---
+    public void SetGoalItem(GoalItem newGoal) => CurrentGoalItem = newGoal;
+
+    public GoalItem ExtractGoalItem()
+    {
+        GoalItem extracted = CurrentGoalItem;
+        CurrentGoalItem = null;
+        return extracted;
+    }
+
+    // --- DURUM KONTROLLERİ ---
     public bool HasItem => CurrentItem != null;
+    public bool HasGoalItem => CurrentGoalItem != null;
+    
+    // Hücre tamamen boş mu? (Ne normal taş ne de hedef var)
+    public bool IsEmpty => !HasItem && !HasGoalItem; 
 }

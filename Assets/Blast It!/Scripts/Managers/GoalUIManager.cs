@@ -10,7 +10,8 @@ public class GoalUIManager : MonoBehaviour
     [System.Serializable]
     public struct GoalSpriteMap
     {
-        public ItemType type;
+        // ESKİ: public ItemType type;
+        public GoalType type; // YENİ SİSTEME UYARLANDI
         public Sprite icon;
     }
 
@@ -18,10 +19,10 @@ public class GoalUIManager : MonoBehaviour
     public List<GoalSpriteMap> spriteDatabaseList;
 
     // --- PROFESYONEL VERİ YAPILARI ---
-    private Dictionary<ItemType, Sprite> spriteDatabase = new Dictionary<ItemType, Sprite>();
+    private Dictionary<GoalType, Sprite> spriteDatabase = new Dictionary<GoalType, Sprite>();
     
     // Aktif olarak ekranda olan hedefleri anında bulmak için (Arama O(1))
-    private Dictionary<ItemType, GoalUIItem> activeUIItems = new Dictionary<ItemType, GoalUIItem>();
+    private Dictionary<GoalType, GoalUIItem> activeUIItems = new Dictionary<GoalType, GoalUIItem>();
     
     // Object Pool (Uyuyanlar Listesi)
     private Queue<GoalUIItem> itemPool = new Queue<GoalUIItem>();
@@ -73,7 +74,7 @@ public class GoalUIManager : MonoBehaviour
     /// GoalManager yeni level verisini yolladığında çalışır.
     /// Eski UI'ları uyutup (Pool), gereken kadarını uyandırıp ekrana dizer.
     /// </summary>
-    private void BuildGoalsUI(Dictionary<ItemType, int> newGoals)
+    private void BuildGoalsUI(Dictionary<GoalType, int> newGoals)
     {
         // 1. Ekranda aktif olan her şeyi havuza geri at (Destroy YOK!)
         foreach (var activeItem in activeUIItems.Values)
@@ -86,8 +87,11 @@ public class GoalUIManager : MonoBehaviour
         // 2. Yeni hedefler için havuzdan eleman çek veya yetmezse yeni üret
         foreach (var kvp in newGoals)
         {
-            ItemType type = kvp.Key;
+            GoalType type = kvp.Key;
             int amount = kvp.Value;
+
+            // Eğer hedef "None" ise UI çizme (Normal taşlar hedef değildir)
+            if (type == GoalType.None) continue;
 
             GoalUIItem uiItem = GetItemFromPool();
             
@@ -112,12 +116,12 @@ public class GoalUIManager : MonoBehaviour
         return Instantiate(goalItemPrefab, goalsContainer);
     }
 
-    private void UpdateGoalAmount(ItemType type, int remainingAmount)
+    private void UpdateGoalAmount(GoalType type, int remainingAmount)
     {
         // Hedef tahtada var mı diye Dictionary'den O(1) hızında sor
         if (activeUIItems.TryGetValue(type, out GoalUIItem uiItem))
         {
             uiItem.PlayUpdateAnimation(remainingAmount);
         }
-    }
+    } 
 }

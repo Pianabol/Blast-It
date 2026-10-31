@@ -1,14 +1,23 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Hedefleri (Goal) Inspector'da gösterebilmek için seri hale getirilebilir bir yapı kuruyoruz
+// Hücreye atanabilecek özel eşyalar (Varsayılan olarak "None" ise normal taş demektir)
+public enum GoalType
+{
+    None,   // Boş, buraya normal renkli taş (Item) gelecek
+    Clock,
+    Coin,
+    Time,
+    Trophy
+}
+
+// Bölümün hedeflerini tutan yapı
 [System.Serializable]
 public struct LevelGoal
 {
-    public ItemType TargetItemType; // Hangi renk/tip taş?
-    public int TargetAmount;        // Kaç tane patlatılacak?
+    public GoalType TargetGoalType; // Hangi hedef? (Saat, Kupa vb.)
+    public int TargetAmount;        // Bölümü geçmek için toplam kaç tane toplanacak?
 }
-
 
 [CreateAssetMenu(fileName = "Level_001", menuName = "Blast It/Level Data")]
 public class LevelData : ScriptableObject
@@ -21,21 +30,23 @@ public class LevelData : ScriptableObject
     public int totalMoves = 20;
     public List<LevelGoal> levelGoals;
 
-    [Header("Grid Layout (1D Array mapped to 2D)")]
-    [Tooltip("Tahta boyutu (Width x Height) kadar eleman olmalıdır. Sol alttan (0,0) başlayarak sağa ve yukarı doğru okunur.")]
-    public CellType[] gridLayout;
+    // 1. Dizi: Zemin türü (Normal, Void, Obstacle)
+    [HideInInspector] public CellType[] gridLayout;
+    
+    // 2. Dizi: Hücrenin üstündeki özel hedef (None ise normal renkli taş düşer)
+    [HideInInspector] public GoalType[] goalLayout; 
 
-    /// <summary>
-    /// X ve Y koordinatını 1 boyutlu dizi indeksine çevirir.
-    /// </summary>
     public CellType GetCellType(int x, int y)
     {
         int index = x + (y * width);
-        
-        // Eğer dizi henüz doldurulmadıysa veya boyutu uyuşmuyorsa varsayılan olarak Normal dön
-        if (gridLayout == null || index < 0 || index >= gridLayout.Length)
-            return CellType.Normal;
-
+        if (gridLayout == null || index < 0 || index >= gridLayout.Length) return CellType.Normal;
         return gridLayout[index];
+    }
+
+    public GoalType GetGoalType(int x, int y)
+    {
+        int index = x + (y * width);
+        if (goalLayout == null || index < 0 || index >= goalLayout.Length) return GoalType.None;
+        return goalLayout[index];
     }
 }

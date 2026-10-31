@@ -20,34 +20,28 @@ public class BoardGravity : MonoBehaviour
 
         for (int x = 0; x < BoardManager.Instance.Width; x++)
         {
-            int spawnCount = 0; // Tepeden (ekran dışından) kaç tane yeni taş doğacak?
+            int spawnCount = 0;
 
-            // Sütunu en aşağıdan (y=0) en tepeye kadar tarıyoruz
             for (int y = 0; y < BoardManager.Instance.Height; y++)
             {
                 Cell currentCell = BoardManager.Instance.GetCell(x, y);
-
-                // Eğer hücre Void veya Obstacle ise burayla işimiz yok, es geç
                 if (!currentCell.IsPlayable) continue;
 
-                // Oynanabilir bir hücre BOŞ kalmışsa, doldurmamız lazım!
-                if (!currentCell.HasItem)
+                // Hücre tamamen boşsa (Normal taş da yok hedef de yok)
+                if (currentCell.IsEmpty)
                 {
                     bool itemFell = false;
 
-                    // Bu boşluğun üstündeki (upperY) tüm hücreleri tarayıp düşecek taş arıyoruz
                     for (int upperY = y + 1; upperY < BoardManager.Instance.Height; upperY++)
                     {
                         Cell upperCell = BoardManager.Instance.GetCell(x, upperY);
-
-                        // Eğer yukarıdaki hücre Void/Obstacle ise taşı engellemesin, içinden geçip gitsin
                         if (!upperCell.IsPlayable) continue;
 
-                        // Düşecek bir taş bulduk!
+                        // 1. DURUM: Yukarıda normal taş varsa düşür
                         if (upperCell.HasItem)
                         {
-                            Item item = upperCell.ExtractItem(); // Yukarıdan sök
-                            currentCell.SetItem(item);           // Boşluğa yerleştir
+                            Item item = upperCell.ExtractItem(); 
+                            currentCell.SetItem(item); 
                             item.UpdateCoordinates(x, y);
 
                             Vector3 targetPos = BoardManager.Instance.GridToWorldPosition(x, y);
@@ -56,14 +50,31 @@ public class BoardGravity : MonoBehaviour
                             item.MoveTo(targetPos, dropDuration);
                             gravityApplied = true;
                             itemFell = true;
-                            break; // Bu boşluk dolduğuna göre, dış döngüdeki bir sonraki boşluğu aramaya geç
+                            break; 
+                        }
+                        // 2. DURUM (YENİ): Yukarıda Kupa/Saat varsa onu düşür
+                        else if (upperCell.HasGoalItem)
+                        {
+                            GoalItem goal = upperCell.ExtractGoalItem();
+                            currentCell.SetGoalItem(goal);
+                            goal.UpdateCoordinates(x, y);
+
+                            Vector3 targetPos = BoardManager.Instance.GridToWorldPosition(x, y);
+                            targetPos.y = 0.5f;
+
+                            goal.MoveTo(targetPos, dropDuration);
+                            gravityApplied = true;
+                            itemFell = true;
+                            break;
                         }
                     }
 
-                    // Yukarıdaki her yere baktık ama düşecek taş bulamadık. 
-                    // Demek ki o sütundaki tüm var olan taşlar düştü. Havuzdan YENİ TAŞ çekmeliyiz!
+                    // Yukarıda düşecek hiçbir şey kalmamış, ekranın tepesinden YENİ bir şey üretmeliyiz
                     if (!itemFell)
                     {
+                        // TODO: Sıradaki aşamada buraya "GoalManager.GetRemainingGoalAmount()" sorusu 
+                        // sorularak % ihtimalle yukarıdan GoalItem (Kupa) düşürme şansı eklenecek.
+                        
                         Item newItem = ItemPool.Instance.GetRandomItem();
                         currentCell.SetItem(newItem);
                         newItem.UpdateCoordinates(x, y);
@@ -71,7 +82,6 @@ public class BoardGravity : MonoBehaviour
                         Vector3 targetPos = BoardManager.Instance.GridToWorldPosition(x, y);
                         targetPos.y = 0.5f;
 
-                        // Taşı ekran dışından (en tepeden) başlatarak düşme efekti veriyoruz
                         Vector3 spawnPos = BoardManager.Instance.GridToWorldPosition(x, BoardManager.Instance.Height + spawnCount);
                         spawnPos.y = 0.5f;
                         newItem.transform.position = spawnPos;
@@ -84,10 +94,6 @@ public class BoardGravity : MonoBehaviour
             }
         }
 
-        // Eğer en az bir taş hareket ettiyse, animasyon bitene kadar şefi beklet
-        if (gravityApplied)
-        {
-            yield return new WaitForSeconds(dropDuration);
-        }
+        if (gravityApplied) yield return new WaitForSeconds(dropDuration);
     }
 }
