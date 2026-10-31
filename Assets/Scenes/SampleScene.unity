@@ -163,7 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9db7124452874c5bb90d62af7c13ef5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BoardBorderManager
-  straightPrefab: {fileID: 588744202762374181, guid: 60e4ce2b4e8734b45b5950bb43956d46, type: 3}
+  straightPrefab: {fileID: 3234892963482758697, guid: 3caee9498cfc14e52a4719ca9854ad83, type: 3}
   cornerPrefab: {fileID: 3813037815800712986, guid: 46d2d285922c74ebd888f06facc6946f, type: 3}
   borderRoot: {fileID: 1977696452}
   borderThickness: 0.4
@@ -415,7 +415,7 @@ Camera:
   far clip plane: 150
   field of view: 60
   orthographic: 1
-  orthographic size: 4
+  orthographic size: 5.02
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -925,7 +925,7 @@ Light:
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 10, y: 10}
   m_Shadows:
-    m_Type: 2
+    m_Type: 0
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
