@@ -7,11 +7,14 @@ public class GoalManager : MonoBehaviour
 {
     public static GoalManager Instance { get; private set; }
 
-    // UI'ın dinleyeceği yayınlar (Events) artık GoalType (Kupa, Saat vb.) kullanıyor
     public event Action<Dictionary<GoalType, int>> OnGoalsSet;
     public event Action<GoalType, int> OnGoalDecreased;
 
     private Dictionary<GoalType, int> activeGoals = new Dictionary<GoalType, int>();
+    
+    // YENİ: Kota takibi için eklenen sözlükler
+    private Dictionary<GoalType, int> totalGoals = new Dictionary<GoalType, int>();
+    private Dictionary<GoalType, int> spawnedGoals = new Dictionary<GoalType, int>();
 
     private void Awake()
     {
@@ -22,51 +25,74 @@ public class GoalManager : MonoBehaviour
     public void SetGoals(List<LevelGoal> goals)
     {
         activeGoals.Clear();
+        totalGoals.Clear();
+        spawnedGoals.Clear();
+
         foreach (LevelGoal goal in goals)
         {
-            // Dictionary'de hedefi GoalType olarak kaydediyoruz
             if (activeGoals.ContainsKey(goal.TargetGoalType))
+            {
                 activeGoals[goal.TargetGoalType] += goal.TargetAmount;
+                totalGoals[goal.TargetGoalType] += goal.TargetAmount;
+            }
             else
+            {
                 activeGoals.Add(goal.TargetGoalType, goal.TargetAmount);
+                totalGoals.Add(goal.TargetGoalType, goal.TargetAmount);
+                spawnedGoals.Add(goal.TargetGoalType, 0); // Başlangıçta 0 adet üretildi
+            }
         }
         
         Debug.Log($"<color=yellow>[GoalManager]</color> Hedefler yüklendi! Toplam {activeGoals.Count} farklı görev var.");
-        
-        // UI sistemine "Hedefler hazır, ekrana diz!" diye bağır
         OnGoalsSet?.Invoke(activeGoals);
     }
 
     public void DecreaseGoal(GoalType type)
     {
-        // Eğer boş bir tip gönderildiyse (None) hiç işleme sokma
         if (type == GoalType.None) return;
 
         if (activeGoals.ContainsKey(type) && activeGoals[type] > 0)
         {
             activeGoals[type]--;
             Debug.Log($"<color=green>[GoalManager]</color> Hedef vuruldu! Kalan {type}: {activeGoals[type]}");
-
-            // UI sistemine "Bu özel eşyadan 1 tane eksilt!" diye bağır
             OnGoalDecreased?.Invoke(type, activeGoals[type]);
-
             CheckWinCondition();
         }
     }
 
-    // YENİ: Gravity Refill (Yerçekimi) sisteminin kalan hedefi sorgulaması için
+    // YENİ: Editörden veya Havadan her Kupa/Saat üretildiğinde sayacı 1 artırır
+    public void NotifyGoalSpawned(GoalType type)
+    {
+        if (spawnedGoals.ContainsKey(type))
+        {
+            spawnedGoals[type]++;
+            Debug.Log($"<color=blue>[GoalManager]</color> {type} Spawnlandı. Kota: {spawnedGoals[type]}/{totalGoals[type]}");
+        }
+    }
+
+    // Yerçekimi yeni bir hedef düşürmeden önce "Kota doldu mu veya Hedef bitti mi?" diye sorar
+    public bool CanSpawnGoal(GoalType type)
+    {
+        // 1. ZORLUK KİLİDİ: Hedef zaten sıfırlanmışsa (UI'da tiklenmişse) ASLA üretme
+        if (activeGoals.ContainsKey(type) && activeGoals[type] <= 0) return false;
+
+        // 2. KOTA KİLİDİ: Üretim kotası dolmuşsa üretme
+        if (totalGoals.ContainsKey(type) && spawnedGoals.ContainsKey(type))
+        {
+            return spawnedGoals[type] < totalGoals[type]; 
+        }
+        return false;
+    }
+
     public int GetRemainingGoalAmount(GoalType type)
     {
-        if (activeGoals.ContainsKey(type))
-            return activeGoals[type];
-            
+        if (activeGoals.ContainsKey(type)) return activeGoals[type];
         return 0;
     }
 
     private void CheckWinCondition()
     {
         bool allGoalsMet = activeGoals.Values.All(amount => amount <= 0);
-
         if (allGoalsMet)
         {
             Debug.Log($"<color=magenta>[GoalManager]</color> BÜTÜN HEDEFLER TAMAMLANDI!");

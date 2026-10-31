@@ -102,11 +102,14 @@ public class BoardManager : MonoBehaviour
                         Vector3 targetPos = GridToWorldPosition(x, y);
                         targetPos.y = 0.5f;
                         newGoal.transform.position = targetPos;
+
+                        // YENİ: Editörden yerleştirilen hedeflerin kotadan düşmesi için Hakeme bildir!
+                        if (GoalManager.Instance != null) GoalManager.Instance.NotifyGoalSpawned(goalType);
                     }
                 }
             }
         }
-        Debug.Log("<color=cyan>[BoardManager]</color> Editor hedefleri sahneye yerleştirildi!");
+        Debug.Log("<color=cyan>[BoardManager]</color> Editor hedefleri sahneye yerleştirildi ve kotadan düşüldü!");
     }
 
     private void FillBoardWithRandomItems()

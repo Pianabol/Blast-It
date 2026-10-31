@@ -1,5 +1,5 @@
 using System.Collections;
-using System.Collections.Generic; // Listeler için eklendi
+using System.Collections.Generic;
 using UnityEngine;
 
 public class BoardGravity : MonoBehaviour
@@ -12,6 +12,8 @@ public class BoardGravity : MonoBehaviour
     [Header("Goal Drop Settings")]
     [Tooltip("Yukarıdan düşen bir nesnenin GoalItem olma ihtimali (0-100)")]
     [Range(0, 100)] [SerializeField] private int goalDropChance = 15; 
+    [Tooltip("Bir şelale (cascade) dalgasında maksimum kaç hedef düşebilir? Zorluk için 1 idealdir.")]
+    [SerializeField] private int maxGoalsPerCascade = 1; 
 
     private void Awake()
     {
@@ -22,6 +24,7 @@ public class BoardGravity : MonoBehaviour
     public IEnumerator ApplyGravityRoutine()
     {
         bool gravityApplied = false;
+        int goalsSpawnedThisCascade = 0; // YENİ: Bu şelalede kaç hedef ürettik?
 
         for (int x = 0; x < BoardManager.Instance.Width; x++)
         {
@@ -71,39 +74,36 @@ public class BoardGravity : MonoBehaviour
                         }
                     }
 
-                    // =================================================================
-                    // YENİ: YUKARIDAN YENİ NESNE ÜRETİMİ (REFILL) - GOAL VE ITEM AYRIMI
-                    // =================================================================
                     if (!itemFell)
                     {
                         MonoBehaviour spawnedObject = null;
                         
-                        // 1. Şansımızı deniyoruz: Acaba GoalItem düşürmeli miyiz?
-                        if (Random.Range(0, 100) < goalDropChance && GoalManager.Instance != null)
+                        // YENİ: Önce Şelale limitine bak, limit aşılmadıysa % ihtimali hesapla
+                        if (goalsSpawnedThisCascade < maxGoalsPerCascade && Random.Range(0, 100) < goalDropChance && GoalManager.Instance != null)
                         {
-                            // Hangi hedeflerden hala ihtiyacımız var bulalım
-                            List<GoalType> neededGoals = new List<GoalType>();
+                            List<GoalType> spawnableGoals = new List<GoalType>();
                             foreach (GoalType type in System.Enum.GetValues(typeof(GoalType)))
                             {
-                                if (type != GoalType.None && GoalManager.Instance.GetRemainingGoalAmount(type) > 0)
+                                if (type != GoalType.None && GoalManager.Instance.CanSpawnGoal(type))
                                 {
-                                    neededGoals.Add(type);
+                                    spawnableGoals.Add(type);
                                 }
                             }
 
-                            // Eğer hala toplanması gereken hedef varsa, onlardan rastgele birini seç
-                            if (neededGoals.Count > 0)
+                            if (spawnableGoals.Count > 0)
                             {
-                                GoalType selectedGoalType = neededGoals[Random.Range(0, neededGoals.Count)];
+                                GoalType selectedGoalType = spawnableGoals[Random.Range(0, spawnableGoals.Count)];
                                 GoalItem newGoal = GoalItemPool.Instance.GetItem(selectedGoalType);
                                 
                                 currentCell.SetGoalItem(newGoal);
                                 newGoal.UpdateCoordinates(x, y);
                                 spawnedObject = newGoal;
+
+                                GoalManager.Instance.NotifyGoalSpawned(selectedGoalType);
+                                goalsSpawnedThisCascade++; // Bu cascade için limiti artır
                             }
                         }
 
-                        // 2. Eğer GoalItem düşmediyse (şans tutmadıysa veya hedefler bittiyse), Normal Item düşür
                         if (spawnedObject == null)
                         {
                             Item newItem = ItemPool.Instance.GetRandomItem();
@@ -112,7 +112,6 @@ public class BoardGravity : MonoBehaviour
                             spawnedObject = newItem;
                         }
 
-                        // Üretilen objeyi (Goal veya Item) yukarıdan sahneye indir
                         Vector3 targetPos = BoardManager.Instance.GridToWorldPosition(x, y);
                         targetPos.y = 0.5f;
 
