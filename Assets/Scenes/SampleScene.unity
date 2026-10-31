@@ -1213,7 +1213,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41b874d38c6bf4a4d8c56835fb7c0368, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InputManager
-  mainCamera: {fileID: 330585545}
   boardLayer:
     serializedVersion: 2
     m_Bits: 64
@@ -1342,6 +1341,53 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 451617126}
   m_CullTransparentMesh: 1
+--- !u!1 &514984644
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 514984645}
+  - component: {fileID: 514984646}
+  m_Layer: 0
+  m_Name: CameraManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &514984645
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 514984644}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1325075139}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &514984646
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 514984644}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a15653fbbf284422f8065a7f283d5391, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraManager
+  mainCamera: {fileID: 330585545}
+  paddingX: 4
+  paddingY: 2
 --- !u!1 &521594594
 GameObject:
   m_ObjectHideFlags: 0
@@ -2283,7 +2329,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
   allLevels:
-  - {fileID: 11400000, guid: c900cd819a08c4de7b8c5fcb43170ea2, type: 2}
+  - {fileID: 11400000, guid: 95cf6f80a02604cb8b5eb9408444f2cc, type: 2}
 --- !u!1 &1132453817
 GameObject:
   m_ObjectHideFlags: 0
@@ -2772,6 +2818,7 @@ Transform:
   - {fileID: 442973214}
   - {fileID: 1879138990}
   - {fileID: 1107364668}
+  - {fileID: 514984645}
   - {fileID: 728851634}
   - {fileID: 1435348383}
   - {fileID: 1810064650}
@@ -4142,13 +4189,13 @@ MonoBehaviour:
   goalItemPrefab: {fileID: 6857142013587450020, guid: 717aaf26e250d4dc5baf736378f70659, type: 3}
   spriteDatabaseList:
   - type: 1
-    icon: {fileID: 21300000, guid: 8c8eaa48557344e4cbeccecd60122bee, type: 3}
+    icon: {fileID: 21300000, guid: cb3f67cd447d34f77b2b2caefc2257a5, type: 3}
   - type: 2
-    icon: {fileID: 21300000, guid: a785fd83fdf0440c0a1607463004747f, type: 3}
+    icon: {fileID: 21300000, guid: d70c75d32c4074a19aa69b3047f02b5f, type: 3}
   - type: 3
-    icon: {fileID: 21300000, guid: 4a42e69ab26a74822a7bdd24d922033b, type: 3}
+    icon: {fileID: 21300000, guid: 52057b9932d4e4ddc83c0f87e0833a9e, type: 3}
   - type: 4
-    icon: {fileID: 21300000, guid: 02c6dc18b082945b5a6a32dcacc32666, type: 3}
+    icon: {fileID: 21300000, guid: e6e0405f590b84f6cb8267be17dd0eff, type: 3}
 --- !u!1 &1879138989
 GameObject:
   m_ObjectHideFlags: 0

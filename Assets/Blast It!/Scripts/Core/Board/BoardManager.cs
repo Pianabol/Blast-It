@@ -63,6 +63,12 @@ public class BoardManager : MonoBehaviour
 
         // 3. AŞAMA: Kalan boşlukları (IsEmpty) Normal Taşlarla Doldur
         FillBoardWithRandomItems();
+
+        // 4. AŞAMA: Kamerayı Tahtaya Göre Otomatik Boyutlandır
+        if (CameraManager.Instance != null)
+        {
+            CameraManager.Instance.FrameBoard(width, height, cellSize);
+        }
     }
 
     private void SpawnGoalItemsFromData(LevelData levelData)
