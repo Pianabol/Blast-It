@@ -136,6 +136,265 @@ public class BoardOrchestrator : MonoBehaviour
             // Bu büyük While döngüsü, hamle kalana kadar veya oyun kazanılana kadar "Karıştır -> Varsa Patlat -> Hamle Kontrol Et" şeklinde döner.
         }
     }
+#region PowerUps
+    // shuffle sistemi
+
+#region Shuffle PowerUp
+    public IEnumerator ExecuteShuffle()
+    {
+        if (IsAnimating)
+            yield break;
+
+        // Lock the board during the entire operation.
+        IsAnimating = true;
+
+        // Clear any previously selected tile.
+        ClearSelectionForBoardChange();
+
+        // Shuffle existing items.
+        yield return StartCoroutine(
+            BoardManager.Instance.ShuffleBoardRoutine()
+        );
+
+        // Resolve matches, gravity, cascades and deadlocks.
+        List<Cell> matches = MatchDetector.Instance.FindAllMatches();
+
+        yield return StartCoroutine(
+            ProcessBoardRoutine(matches)
+        );
+
+        // Unlock only after everything is finished.
+        IsAnimating = false;
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.EvaluateGameEnd();
+    }
+
+    private void ClearSelectionForBoardChange()
+    {
+        if (firstSelectedCell == null)
+            return;
+
+        if (firstSelectedCell.HasItem)
+        {
+            Item item = firstSelectedCell.CurrentItem;
+
+            LeanTween.cancel(item.gameObject);
+
+            item.transform.localScale = Vector3.one;
+
+            Vector3 position = BoardManager.Instance
+                .GridToWorldPosition(
+                    firstSelectedCell.X,
+                    firstSelectedCell.Y
+                );
+
+            position.y = 0.5f;
+            item.transform.position = position;
+        }
+
+        firstSelectedCell = null;
+    }
+
+    //Hammer power up
+
+    public void CancelCurrentSelection()
+    {
+        if (IsAnimating) return;
+
+        ClearSelectionForBoardChange();
+    }
+
+#endregion
+
+#region Hammer PowerUp
+    public bool CanHammerTarget(int x, int y)
+    {
+        if (IsAnimating || BoardManager.Instance == null)
+            return false;
+
+        Cell cell = BoardManager.Instance.GetCell(x, y);
+
+        return cell != null &&
+            cell.IsPlayable &&
+            (cell.HasItem || cell.HasGoalItem);
+    }
+
+    public IEnumerator ExecuteHammer(int x, int y)
+    {
+        if (!CanHammerTarget(x, y))
+            yield break;
+
+        // Lock the board immediately.
+        IsAnimating = true;
+
+        ClearSelectionForBoardChange();
+
+        Cell targetCell = BoardManager.Instance.GetCell(x, y);
+
+        if (targetCell.HasGoalItem)
+        {
+            // Collect through the existing Goal system.
+            GoalItem goal = targetCell.ExtractGoalItem();
+
+            LeanTween.cancel(goal.gameObject);
+            goal.Collect();
+        }
+        else if (targetCell.HasItem)
+        {
+            Item item = targetCell.ExtractItem();
+
+            LeanTween.cancel(item.gameObject);
+
+            // Small destruction animation.
+            LeanTween.scale(
+            item.gameObject,
+            Vector3.zero,
+            0.15f
+                            ).setEaseInBack();
+
+            yield return new WaitForSeconds(0.15f);
+
+            item.transform.localScale = Vector3.one;
+            ItemPool.Instance.ReturnItem(item);
+        }
+
+        // Fill the empty cell.
+        yield return StartCoroutine(
+            BoardGravity.Instance.ApplyGravityRoutine()
+        );
+
+        // Resolve matches, cascades and deadlocks.
+        List<Cell> matches = MatchDetector.Instance.FindAllMatches();
+
+        yield return StartCoroutine(
+            ProcessBoardRoutine(matches)
+        );
+
+        // Unlock after all board operations finish.
+        IsAnimating = false;
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.EvaluateGameEnd();
+    }
+#endregion
+    //Bomb ile alakalı
+
+#region Bomb PowerUp
+    public bool CanBombTarget(int x, int y)
+    {
+        if (IsAnimating || BoardManager.Instance == null)
+            return false;
+
+        Cell cell = BoardManager.Instance.GetCell(x, y);
+
+        return cell != null &&
+            cell.IsPlayable &&
+            (cell.HasItem || cell.HasGoalItem);
+    }
+
+    public IEnumerator ExecuteBomb(int centerX, int centerY)
+    {
+        if (!CanBombTarget(centerX, centerY))
+            yield break;
+
+        // Lock the board during the entire operation.
+        IsAnimating = true;
+        ClearSelectionForBoardChange();
+
+        List<Item> itemsToDestroy = new List<Item>(9);
+        List<GoalItem> goalsToCollect = new List<GoalItem>(9);
+
+        // Scan the 3x3 area around the selected cell.
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                Cell cell = BoardManager.Instance.GetCell(
+                    centerX + dx,
+                    centerY + dy
+                );
+
+                // Ignore out-of-bounds, Void and Obstacle cells.
+                if (cell == null || !cell.IsPlayable)
+                    continue;
+
+                if (cell.HasItem)
+                {
+                    itemsToDestroy.Add(cell.ExtractItem());
+                }
+                else if (cell.HasGoalItem)
+                {
+                    goalsToCollect.Add(cell.ExtractGoalItem());
+                }
+            }
+        }
+
+        // Animate all affected objects simultaneously.
+        const float destroyDuration = 0.2f;
+
+        foreach (Item item in itemsToDestroy)
+        {
+            LeanTween.cancel(item.gameObject);
+
+            LeanTween.scale(
+                item.gameObject,
+                Vector3.zero,
+                destroyDuration
+            ).setEaseInBack();
+        }
+
+        foreach (GoalItem goal in goalsToCollect)
+        {
+            LeanTween.cancel(goal.gameObject);
+
+            LeanTween.scale(
+                goal.gameObject,
+                Vector3.zero,
+                destroyDuration
+            ).setEaseInBack();
+        }
+
+        yield return new WaitForSeconds(destroyDuration);
+
+        // Return normal items to their pool.
+        foreach (Item item in itemsToDestroy)
+        {
+            item.transform.localScale = Vector3.one;
+            ItemPool.Instance.ReturnItem(item);
+        }
+
+        // Collect goals through the existing goal system.
+        foreach (GoalItem goal in goalsToCollect)
+        {
+            goal.Collect();
+        }
+
+        // Fill empty cells using the existing gravity system.
+        yield return StartCoroutine(
+            BoardGravity.Instance.ApplyGravityRoutine()
+        );
+
+        // Resolve matches, cascades and deadlocks.
+        List<Cell> matches =
+            MatchDetector.Instance.FindAllMatches();
+
+        yield return StartCoroutine(
+            ProcessBoardRoutine(matches)
+        );
+
+        // Unlock only after every board operation finishes.
+        IsAnimating = false;
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.EvaluateGameEnd();
+    }
+
+#endregion
+
+
+
+#endregion
 
     private IEnumerator SwapRoutine(Cell cellA, Cell cellB)
     {

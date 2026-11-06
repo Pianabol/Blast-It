@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class InputManager : MonoBehaviour
 {
@@ -8,11 +9,23 @@ public class InputManager : MonoBehaviour
 
     private void Update()
     {
-        // Fare tıklaması (veya dokunmatik ekran) kontrolü
+        
         if (Input.GetMouseButtonDown(0))
         {
-            HandleClick(Input.mousePosition);
+            bool pointerOverUI = false;
+
+            if (EventSystem.current != null)
+            {
+                pointerOverUI = Input.touchCount > 0
+                    ? EventSystem.current.IsPointerOverGameObject(
+                        Input.GetTouch(0).fingerId)
+                    : EventSystem.current.IsPointerOverGameObject();
+            }
+
+            if (!pointerOverUI)
+                HandleClick(Input.mousePosition);
         }
+
 
         // Manuel Shuffle Test Tetikleyicisi
         if (Input.GetKeyDown(KeyCode.S))
@@ -36,6 +49,27 @@ public class InputManager : MonoBehaviour
             if (BoardManager.Instance.IsValidCoordinate(gridCoordinate.x, gridCoordinate.y))
             {
                 Debug.Log($"<color=yellow>[INPUT]</color> Tıklanan Hücre: [{gridCoordinate.x}, {gridCoordinate.y}]");
+
+                if (PowerUpManager.Instance != null)
+                {
+                    if (PowerUpManager.Instance.IsUsingPowerUp)
+                        return;
+
+                    PowerUpType selected =
+                        PowerUpManager.Instance.SelectedPowerUp;
+
+                    if (selected != PowerUpType.None)
+                    {
+                        PowerUpManager.Instance.TryUseSelectedAt(
+                            gridCoordinate.x,
+                            gridCoordinate.y
+                        );
+
+                        // Never forward PowerUp clicks to normal swapping.
+                        return;
+                    }
+                }
+
                 
                 if (BoardOrchestrator.Instance != null)
                 {
@@ -55,23 +89,7 @@ public class InputManager : MonoBehaviour
 
     private void TriggerManualShuffle()
     {
-        if (GameManager.Instance != null && !GameManager.Instance.CanPlay()) 
-        {
-            Debug.LogWarning("<color=yellow>[INPUT]</color> Oyun aktif değil, Shuffle yapılamaz.");
-            return;
-        }
-
-        if (BoardOrchestrator.Instance != null && BoardOrchestrator.Instance.IsAnimating) 
-        {
-            Debug.LogWarning("<color=yellow>[INPUT]</color> Animasyon devam ederken Shuffle yapılamaz.");
-            return;
-        }
-
-        Debug.Log("<color=magenta>[INPUT]</color> Manuel Shuffle Testi Tetiklendi!");
-        
-        if (BoardManager.Instance != null)
-        {
-            BoardManager.Instance.StartCoroutine(BoardManager.Instance.ShuffleBoardRoutine());
-        }
+        if (PowerUpManager.Instance != null)
+            PowerUpManager.Instance.UseShuffle();
     }
 }
